@@ -11,7 +11,7 @@ function [k, Lapx_k, Lapy_k, LapLap_k]=NN_err_fun_kernel_diff_exact_uploaded(X,Y
   
  %%%%%%%%%%% INPUT
  %%% X:  N1 by d_{in} matrix corresponding to input vector x, where d_{in} is
- %%%    the dimensionality of input space. 
+ %%%    the dimensionality of input space. To solve 2D Poisson equation, d_{in} should be 2.
  %%% Y:  N2 by d_{in} matrix corresponding to input vector x'
  %%% var_weight0: 1 by d_{in} vector, including variances of the weights 
  %%%                              between input and first hidden layers
