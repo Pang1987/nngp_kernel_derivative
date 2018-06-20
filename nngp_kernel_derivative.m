@@ -1,7 +1,7 @@
 
 function [k, Lapx_k, Lapy_k, LapLap_k]=NN_err_fun_kernel_diff_exact_uploaded(X,Y,var_weight0,var_bias0,var_weight,var_bias,L)
  %%%% Iteratively compute the covariance matrices from
- %%%%   the NNGP kernel and its derivatives for solving
+ %%%%   the NNGP kernel and kernel's derivatives for solving
  %%%%   2D Poisson equation
  %%%%% The NNGP kernel from error-function nonlinearity:
  %%%%%        covariance -- k2 := k^l(x,x'); 
