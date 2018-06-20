@@ -5,7 +5,7 @@ function [k, Lapx_k, Lapy_k, LapLap_k]=NN_err_fun_kernel_diff_exact_uploaded(X,Y
  %%%%   2D Poisson equation
  %%%%% The NNGP kernel from error-function nonlinearity:
  %%%%%        covariance -- k2 := k^l(x,x'); 
- %%%%%        variances --  k1  := k^l(x,x), k3: =k^l(x',x'),
+ %%%%%        variances --  k1 := k^l(x,x),  k3: =k^l(x',x'),
  %%%%%        where the superscript "l" denotes index of layer, 
  %%%%%            and x and x' are two input vectors.
   
