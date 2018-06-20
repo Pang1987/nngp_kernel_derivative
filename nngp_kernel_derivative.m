@@ -1,10 +1,54 @@
 
-function result=NN_err_fun_kernel_diff_exact(X,Y,var_weight0,var_bias0,var_weight,var_bias,L,order)
- %%%% Iteratively compute the kernel and its derivatives till the output layer
- %%%  -1*(dx1dx1+dx2dx2) of Error function-induced covariance kernel
+function [k, Lapx_k, Lapy_k, LapLap_k]=NN_err_fun_kernel_diff_exact_uploaded(X,Y,var_weight0,var_bias0,var_weight,var_bias,L)
+ %%%% Iteratively compute the covariance matrices from
+ %%%%   the NNGP kernel and its derivatives for solving
+ %%%%   2D Poisson equation
+ %%%%% The NNGP kernel from error-function nonlinearity:
+ %%%%%        covariance -- k2 := k^l(x,x'); 
+ %%%%%        variances --  k1  := k^l(x,x), k3: =k^l(x',x'),
+ %%%%%        where the superscript "l" denotes index of layer, 
+ %%%%%            and x and x' are two input vectors.
+  
+ %%%%%%%%%%%INPUT
+ %%% X:  N1 by d_{in} matrix corresponding to input vector x, where d_{in} is
+ %%%    the dimensionality of input space. 
+ %%% Y:  N2 by d_{in} matrix corresponding to input vector x'
+ %%% var_weight0: 1 by d_{in} vector, including variances of the weights 
+ %%%                              between input and first hidden layers
+ %%%                              (i.e. between layer 0 and layer 1)
+ %%% var_bias0:   scalar, including variance of the bias between input and
+ %%%                      first hidden layers
+ %%% L:           number of hidden layers in the inducing neural net
+ %%% var_weight: 1 by L vector, including the variances of weights 
+ %%%            for layers 2,3,...,L+1
+ 
+ %%%%%%%%%%%OUTPUT
+ %%% k:  k^{L+1}(X,Y), covariance matrix for the output layer (layer L+1)
+ %%% Lapx_k:  -\Delta_x k^{L+1}(X,Y) where 
+ %%%      -\Delta_x:= -\partial/ \partial x1^2-\partial/\partial x2^2
+ %%%        and x1 and x2 are two components of the input vector x
+ %%% Lapy_k:  -\Delta_y k^{L+1}(X,Y) where 
+ %%%      -\Delta_y:= -\partial/ \partial y1^2-\partial/\partial y2^2
+ %%%        and y1 and y2 are two components of the input vector x'
+ %%% LapLap_k:   \Delta_x\Delta_y k^{L+1}(X,Y)
+ 
+ 
+ 
+ %%%%%%%%%%% written by Guofei Pang  June 20, 2018
+ 
+ %%%%%  Notations for some variables
+ %%%%%  k2x1:   first-order parital derivative of k(x,x') with respect to x1
+ %%%%%  k1x1:   first-order partial derivative of k(x,x) over x1
+ %%%%   k2x1y1: second-order partial derivative of k(x,x') over x1 and y1
+    
+ 
+ 
  M=size(X,1);
  N=size(Y,1);
  
+ 
+ 
+ %%% initializations for iteration
  
  k1= var_bias0+repmat(sum(repmat(var_weight0,M,1).*X.^2,2),1,N); 
  k2= var_bias0+(X*diag(var_weight0)*Y');
@@ -20,8 +64,6 @@ function result=NN_err_fun_kernel_diff_exact(X,Y,var_weight0,var_bias0,var_weigh
  k1x2x2=2*var_weight0(2)*ones(M,N);
  k2x2x2=k2x1x1;
  
-%  k1y1=k2x1x1;
-%  k1y2=k2x1x1;
  k2y1=var_weight0(1)*repmat(X(:,1),1,N);
  k3y1=2*var_weight0(1)*repmat(Y(:,1)',M,1);
  k2y2=var_weight0(2)*repmat(X(:,2),1,N);
@@ -32,62 +74,50 @@ function result=NN_err_fun_kernel_diff_exact(X,Y,var_weight0,var_bias0,var_weigh
  k2y1y1=k2x1x1;
  k3y1y1=k1x1x1;
  
- if order>2
  k1x1x1y1=k2x1x1;
  k1x1y1y1=k2x1x1;
  k2x1x1y1=k2x1x1;
  k2x1y1y1=k2x1x1;
  k1x1x1y1y1=k2x1x1;
  k2x1x1y1y1=k2x1x1;
- end
  
  k1x1y2=k2x1x1;
  k2x1y2=k2x1x1;
  k2y2y2=k2x1x1;
  k3y2y2=k1x2x2;
  
- if order>2
  k1x1x1y2=k2x1x1;
  k1x1y2y2=k2x1x1;
  k2x1x1y2=k2x1x1;
  k2x1y2y2=k2x1x1;
  k1x1x1y2y2=k2x1x1;
  k2x1x1y2y2=k2x1x1;
- end
+ 
  
  k1x2y1=k2x1x1;
  k2x2y1=k2x1x1;
  
-%  k1y1y1=k2x1x1;
-%  k1y2y2=k2x1x1;
- if order>2
  k1x2x2y1=k2x1x1;
  k1x2y1y1=k2x1x1;
  k2x2x2y1=k2x1x1;
  k2x2y1y1=k2x1x1;
  k1x2x2y1y1=k2x1x1;
  k2x2x2y1y1=k2x1x1;
- end
  
  k1x2y2=k2x1x1;
  k2x2y2=var_weight0(2)*ones(M,N);
-%  k2y2y2=k2x1x1;
-%  k3y2y2=k1x1x1;
 
-if order>2
  k1x2x2y2=k2x1x1;
  k1x2y2y2=k2x1x1;
  k2x2x2y2=k2x1x1;
  k2x2y2y2=k2x1x1;
  k1x2x2y2y2=k2x1x1;
  k2x2x2y2y2=k2x1x1;
-end
 
 
  for i=1:L
      sw=var_weight(i);
 %%% iteration of covariances    
-    if order>2
      k2x1x1y1y1=-(1./2).*sw.*(-(3./2.*(5.*(1+k1).^2.*k2.*k2x1.^2-k1x1.*(1+k1).*((1+k1).*k3+4.*k2.^2+k1+1).*k2x1-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).*k2.*k1x1x1+(3./4.*((1+k1).*k3+(2./3).*k2.^2+k1+1)).*k2.*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*(1+k1).^2.*k2x1x1)).*(1+k1).^2.*k3y1.^2+2.*(1+k1).^2.*((3.*(1+k1)).*((1+k1).*k3+4.*k2.^2+k1+1).*k2y1.*k2x1.^2+(-9.*k1x1.*((1+k1).*k3+(2./3).*k2.^2+k1+1).*k2.*k2y1-(((1+k1).*k3+2.*k2.^2+k1+1).*k1x1y1-6.*k2x1y1.*k2.*(1+k1)).*((1+k1).*k3-k2.^2+k1+1)).*k2x1+(-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*((1+k1).*k3+2.*k2.^2+k1+1).*k1x1x1+(3./4.*((1+k1).*k3+4.*k2.^2+k1+1)).*(1+k3).*k1x1.^2+(3.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).*k2.*k2x1x1).*k2y1+((1+k1).*k3-k2.^2+k1+1).*((3./2).*k2.*k1x1.*(1+k3).*k1x1y1-k1x1.*((1+k1).*k3+2.*k2.^2+k1+1).*k2x1y1+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k2x1x1y1-(1./2).*k2.*k1x1x1y1))).*k3y1-(2.*((9.*((1+k1).*k3+(2./3).*k2.^2+k1+1)).*k2.*k2y1.^2+((1+k1).*k3-k2.^2+k1+1).*(((1+k1).*k3+2.*k2.^2+k1+1).*k2y1y1-(3./2).*k3y1y1.*k2.*(1+k1)))).*(1+k1).^2.*k2x1.^2-(8.*(-(3./4).*k1x1.*((1+k1).*k3+4.*k2.^2+k1+1).*(1+k3).*k2y1.^2+(-(3./2).*k2.*(1+k3).*k1x1y1+k2x1y1.*((1+k1).*k3+2.*k2.^2+k1+1)).*((1+k1).*k3-k2.^2+k1+1).*k2y1+(1./8.*(-6.*k2.*k1x1.*(1+k3).*k2y1y1+k1x1.*((1+k1).*k3+2.*k2.^2+k1+1).*k3y1y1-(2.*((1+k1).*k3-k2.^2+k1+1)).*((1+k3).*k1x1y1y1-2.*k2x1y1y1.*k2))).*((1+k1).*k3-k2.^2+k1+1))).*(1+k1).^2.*k2x1-(2.*(-(3./2.*((1+k1).*k3-k2.^2+k1+1)).*k2.*(1+k3).*k1x1x1+(15./4).*k2.*(1+k3).^2.*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k3+2.*k2.^2+k1+1).*k2x1x1)).*(1+k1).^2.*k2y1.^2+(2.*((1+k1).*k3-k2.^2+k1+1)).*(-3.*k1x1.*(1+k3).^2.*k1x1y1+6.*k2.*k1x1.*(1+k3).*k2x1y1+((1+k1).*k3-k2.^2+k1+1).*((1+k3).*k1x1x1y1-2.*k2x1x1y1.*k2)).*(1+k1).^2.*k2y1+(-(3.*((1+k1).*k3-k2.^2+k1+1)).*k2.*((1+k1).*k3-(2./3).*k2.^2+k1+1).*k1x1y1.^2+(4.*((1+k1).*k3-k2.^2+k1+1)).*k2x1y1.*(1+k1).^2.*(1+k3).*k1x1y1-(4.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).^2.*k2.*k2x1y1.^2-2.*(1+k1).^2.*(-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*(1+k3).*k1x1x1+(3./4).*(1+k3).^2.*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*k2.*k2x1x1).*k2y1y1-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*k3y1y1.*(1+k1).^2.*k2.*k1x1x1+((3./4).*k2.*(1+k3).*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*(1+k1).*k2x1x1).*(1+k1).^2.*k3y1y1-(2.*((1+k1).*k3-k2.^2+k1+1)).*(((3./2).*k2.*((1+k1).*k3-(2./3).*k2.^2+k1+1).*k1x1y1y1-k2x1y1y1.*(1+k3).*(1+k1).^2).*k1x1+((1+k1).*k2x1x1y1y1-(1./2).*k2.*k1x1x1y1y1).*((1+k1).*k3-k2.^2+k1+1).*(1+k1))).*((1+k1).*k3-k2.^2+k1+1))./(((1+k1).*k3-k2.^2+k1+1).^(7./2).*(1+k1).^2);
      k2x2x2y1y1=-(1./2).*sw.*(-(3./2.*(5.*(1+k1).^2.*k2.*k2x2.^2-k1x2.*(1+k1).*((1+k1).*k3+4.*k2.^2+k1+1).*k2x2-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).*k2.*k1x2x2+(3./4.*((1+k1).*k3+(2./3).*k2.^2+k1+1)).*k2.*k1x2.^2+((1+k1).*k3-k2.^2+k1+1).*(1+k1).^2.*k2x2x2)).*(1+k1).^2.*k3y1.^2+2.*(1+k1).^2.*((3.*(1+k1)).*((1+k1).*k3+4.*k2.^2+k1+1).*k2y1.*k2x2.^2+(-9.*k1x2.*((1+k1).*k3+(2./3).*k2.^2+k1+1).*k2.*k2y1-(((1+k1).*k3+2.*k2.^2+k1+1).*k1x2y1-6.*k2x2y1.*k2.*(1+k1)).*((1+k1).*k3-k2.^2+k1+1)).*k2x2+(-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*((1+k1).*k3+2.*k2.^2+k1+1).*k1x2x2+(3./4.*((1+k1).*k3+4.*k2.^2+k1+1)).*(1+k3).*k1x2.^2+(3.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).*k2.*k2x2x2).*k2y1+((1+k1).*k3-k2.^2+k1+1).*((3./2).*k2.*k1x2.*(1+k3).*k1x2y1-k1x2.*((1+k1).*k3+2.*k2.^2+k1+1).*k2x2y1+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k2x2x2y1-(1./2).*k2.*k1x2x2y1))).*k3y1-(2.*((9.*((1+k1).*k3+(2./3).*k2.^2+k1+1)).*k2.*k2y1.^2+((1+k1).*k3-k2.^2+k1+1).*(((1+k1).*k3+2.*k2.^2+k1+1).*k2y1y1-(3./2).*k3y1y1.*k2.*(1+k1)))).*(1+k1).^2.*k2x2.^2-(8.*(-(3./4).*k1x2.*((1+k1).*k3+4.*k2.^2+k1+1).*(1+k3).*k2y1.^2+(-(3./2).*k2.*(1+k3).*k1x2y1+k2x2y1.*((1+k1).*k3+2.*k2.^2+k1+1)).*((1+k1).*k3-k2.^2+k1+1).*k2y1+(1./8.*(-6.*k2.*k1x2.*(1+k3).*k2y1y1+k1x2.*((1+k1).*k3+2.*k2.^2+k1+1).*k3y1y1-(2.*((1+k1).*k3-k2.^2+k1+1)).*((1+k3).*k1x2y1y1-2.*k2x2y1y1.*k2))).*((1+k1).*k3-k2.^2+k1+1))).*(1+k1).^2.*k2x2-(2.*(-(3./2.*((1+k1).*k3-k2.^2+k1+1)).*k2.*(1+k3).*k1x2x2+(15./4).*k2.*(1+k3).^2.*k1x2.^2+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k3+2.*k2.^2+k1+1).*k2x2x2)).*(1+k1).^2.*k2y1.^2+(2.*((1+k1).*k3-k2.^2+k1+1)).*(-3.*k1x2.*(1+k3).^2.*k1x2y1+6.*k2.*k1x2.*(1+k3).*k2x2y1+((1+k1).*k3-k2.^2+k1+1).*((1+k3).*k1x2x2y1-2.*k2x2x2y1.*k2)).*(1+k1).^2.*k2y1+(-(3.*((1+k1).*k3-k2.^2+k1+1)).*k2.*((1+k1).*k3-(2./3).*k2.^2+k1+1).*k1x2y1.^2+(4.*((1+k1).*k3-k2.^2+k1+1)).*k2x2y1.*(1+k1).^2.*(1+k3).*k1x2y1-(4.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).^2.*k2.*k2x2y1.^2-2.*(1+k1).^2.*(-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*(1+k3).*k1x2x2+(3./4).*(1+k3).^2.*k1x2.^2+((1+k1).*k3-k2.^2+k1+1).*k2.*k2x2x2).*k2y1y1-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*k3y1y1.*(1+k1).^2.*k2.*k1x2x2+((3./4).*k2.*(1+k3).*k1x2.^2+((1+k1).*k3-k2.^2+k1+1).*(1+k1).*k2x2x2).*(1+k1).^2.*k3y1y1-(2.*((1+k1).*k3-k2.^2+k1+1)).*(((3./2).*k2.*((1+k1).*k3-(2./3).*k2.^2+k1+1).*k1x2y1y1-k2x2y1y1.*(1+k3).*(1+k1).^2).*k1x2+((1+k1).*k2x2x2y1y1-(1./2).*k2.*k1x2x2y1y1).*((1+k1).*k3-k2.^2+k1+1).*(1+k1))).*((1+k1).*k3-k2.^2+k1+1))./(((1+k1).*k3-k2.^2+k1+1).^(7./2).*(1+k1).^2);
      k2x1x1y2y2=-(1./2).*sw.*(-(3./2.*(5.*(1+k1).^2.*k2.*k2x1.^2-k1x1.*(1+k1).*((1+k1).*k3+4.*k2.^2+k1+1).*k2x1-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).*k2.*k1x1x1+(3./4.*((1+k1).*k3+(2./3).*k2.^2+k1+1)).*k2.*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*(1+k1).^2.*k2x1x1)).*(1+k1).^2.*k3y2.^2+2.*(1+k1).^2.*((3.*(1+k1)).*((1+k1).*k3+4.*k2.^2+k1+1).*k2y2.*k2x1.^2+(-9.*k1x1.*((1+k1).*k3+(2./3).*k2.^2+k1+1).*k2.*k2y2-(((1+k1).*k3+2.*k2.^2+k1+1).*k1x1y2-6.*k2x1y2.*k2.*(1+k1)).*((1+k1).*k3-k2.^2+k1+1)).*k2x1+(-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*((1+k1).*k3+2.*k2.^2+k1+1).*k1x1x1+(3./4.*((1+k1).*k3+4.*k2.^2+k1+1)).*(1+k3).*k1x1.^2+(3.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).*k2.*k2x1x1).*k2y2+((1+k1).*k3-k2.^2+k1+1).*((3./2).*k2.*k1x1.*(1+k3).*k1x1y2-k1x1.*((1+k1).*k3+2.*k2.^2+k1+1).*k2x1y2+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k2x1x1y2-(1./2).*k2.*k1x1x1y2))).*k3y2-(2.*((9.*((1+k1).*k3+(2./3).*k2.^2+k1+1)).*k2.*k2y2.^2+((1+k1).*k3-k2.^2+k1+1).*(((1+k1).*k3+2.*k2.^2+k1+1).*k2y2y2-(3./2).*k3y2y2.*k2.*(1+k1)))).*(1+k1).^2.*k2x1.^2-(8.*(-(3./4).*k1x1.*((1+k1).*k3+4.*k2.^2+k1+1).*(1+k3).*k2y2.^2+(-(3./2).*k2.*(1+k3).*k1x1y2+k2x1y2.*((1+k1).*k3+2.*k2.^2+k1+1)).*((1+k1).*k3-k2.^2+k1+1).*k2y2+(1./8.*(-6.*k2.*k1x1.*(1+k3).*k2y2y2+k1x1.*((1+k1).*k3+2.*k2.^2+k1+1).*k3y2y2-(2.*((1+k1).*k3-k2.^2+k1+1)).*((1+k3).*k1x1y2y2-2.*k2x1y2y2.*k2))).*((1+k1).*k3-k2.^2+k1+1))).*(1+k1).^2.*k2x1-(2.*(-(3./2.*((1+k1).*k3-k2.^2+k1+1)).*k2.*(1+k3).*k1x1x1+(15./4).*k2.*(1+k3).^2.*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k3+2.*k2.^2+k1+1).*k2x1x1)).*(1+k1).^2.*k2y2.^2+(2.*((1+k1).*k3-k2.^2+k1+1)).*(-3.*k1x1.*(1+k3).^2.*k1x1y2+6.*k2.*k1x1.*(1+k3).*k2x1y2+((1+k1).*k3-k2.^2+k1+1).*((1+k3).*k1x1x1y2-2.*k2x1x1y2.*k2)).*(1+k1).^2.*k2y2+(-(3.*((1+k1).*k3-k2.^2+k1+1)).*k2.*((1+k1).*k3-(2./3).*k2.^2+k1+1).*k1x1y2.^2+(4.*((1+k1).*k3-k2.^2+k1+1)).*k2x1y2.*(1+k1).^2.*(1+k3).*k1x1y2-(4.*((1+k1).*k3-k2.^2+k1+1)).*(1+k1).^2.*k2.*k2x1y2.^2-2.*(1+k1).^2.*(-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*(1+k3).*k1x1x1+(3./4).*(1+k3).^2.*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*k2.*k2x1x1).*k2y2y2-(1./2.*((1+k1).*k3-k2.^2+k1+1)).*k3y2y2.*(1+k1).^2.*k2.*k1x1x1+((3./4).*k2.*(1+k3).*k1x1.^2+((1+k1).*k3-k2.^2+k1+1).*(1+k1).*k2x1x1).*(1+k1).^2.*k3y2y2-(2.*((1+k1).*k3-k2.^2+k1+1)).*(((3./2).*k2.*((1+k1).*k3-(2./3).*k2.^2+k1+1).*k1x1y2y2-k2x1y2y2.*(1+k3).*(1+k1).^2).*k1x1+((1+k1).*k2x1x1y2y2-(1./2).*k2.*k1x1x1y2y2).*((1+k1).*k3-k2.^2+k1+1).*(1+k1))).*((1+k1).*k3-k2.^2+k1+1))./(((1+k1).*k3-k2.^2+k1+1).^(7./2).*(1+k1).^2);
@@ -104,7 +134,6 @@ end
      k2x2y1y1=-sw.*(-(3./4).*(1+k1).^2.*(-(1./2).*k2.*k1x2+k2x2.*(1+k1)).*k3y1.^2+(-(1./2.*((1+k1).*k3+2.*k2.^2+k1+1)).*k2y1.*k1x2+3.*k2.*k2x2.*(1+k1).*k2y1+((1+k1).*k3-k2.^2+k1+1).*(-(1./2).*k2.*k1x2y1+k2x2y1.*(1+k1))).*(1+k1).*k3y1+(1./2.*(1+k1)).*(3.*k2.*(1+k3).*k2y1.^2+((1+k1).*k3-k2.^2+k1+1).*((1+k3).*k2y1y1-(1./2).*k2.*k3y1y1)).*k1x2+(1./2.*(((-2.*k1-2).*k3-4.*k2.^2-2.*k1-2).*k2y1.^2+((1+k1).*k3-k2.^2+k1+1).*(-2.*k2.*k2y1y1+k3y1y1.*(1+k1)))).*(1+k1).*k2x2-((1+k1).*k3-k2.^2+k1+1).*((2.*((-(1./2).*k3-1./2).*k1x2y1+k2x2y1.*k2)).*(1+k1).*k2y1+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k2x2y1y1-(1./2).*k2.*k1x2y1y1)))./(((1+k1).*k3-k2.^2+k1+1).^(5./2).*(1+k1));
      k2x1y2y2=-sw.*(-(3./4).*(1+k1).^2.*(-(1./2).*k2.*k1x1+k2x1.*(1+k1)).*k3y2.^2+(-(1./2.*((1+k1).*k3+2.*k2.^2+k1+1)).*k2y2.*k1x1+3.*k2.*k2x1.*(1+k1).*k2y2+((1+k1).*k3-k2.^2+k1+1).*(-(1./2).*k2.*k1x1y2+k2x1y2.*(1+k1))).*(1+k1).*k3y2+(1./2.*(1+k1)).*(3.*k2.*(1+k3).*k2y2.^2+((1+k1).*k3-k2.^2+k1+1).*((1+k3).*k2y2y2-(1./2).*k2.*k3y2y2)).*k1x1+(1./2.*(((-2.*k1-2).*k3-4.*k2.^2-2.*k1-2).*k2y2.^2+((1+k1).*k3-k2.^2+k1+1).*(-2.*k2.*k2y2y2+k3y2y2.*(1+k1)))).*(1+k1).*k2x1-((1+k1).*k3-k2.^2+k1+1).*((2.*((-(1./2).*k3-1./2).*k1x1y2+k2x1y2.*k2)).*(1+k1).*k2y2+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k2x1y2y2-(1./2).*k2.*k1x1y2y2)))./(((1+k1).*k3-k2.^2+k1+1).^(5./2).*(1+k1));
      k2x2y2y2=-sw.*(-(3./4).*(1+k1).^2.*(-(1./2).*k2.*k1x2+k2x2.*(1+k1)).*k3y2.^2+(-(1./2.*((1+k1).*k3+2.*k2.^2+k1+1)).*k2y2.*k1x2+3.*k2.*k2x2.*(1+k1).*k2y2+((1+k1).*k3-k2.^2+k1+1).*(-(1./2).*k2.*k1x2y2+k2x2y2.*(1+k1))).*(1+k1).*k3y2+(1./2.*(1+k1)).*(3.*k2.*(1+k3).*k2y2.^2+((1+k1).*k3-k2.^2+k1+1).*((1+k3).*k2y2y2-(1./2).*k2.*k3y2y2)).*k1x2+(1./2.*(((-2.*k1-2).*k3-4.*k2.^2-2.*k1-2).*k2y2.^2+((1+k1).*k3-k2.^2+k1+1).*(-2.*k2.*k2y2y2+k3y2y2.*(1+k1)))).*(1+k1).*k2x2-((1+k1).*k3-k2.^2+k1+1).*((2.*((-(1./2).*k3-1./2).*k1x2y2+k2x2y2.*k2)).*(1+k1).*k2y2+((1+k1).*k3-k2.^2+k1+1).*((1+k1).*k2x2y2y2-(1./2).*k2.*k1x2y2y2)))./(((1+k1).*k3-k2.^2+k1+1).^(5./2).*(1+k1));
-    end
      
      k2x1x1=sw.*((((1./2).*k1+1./2).*k1x1x1-(1./2).*k1x1.^2).*k2.^3-k2x1x1.*(1+k1).^2.*k2.^2-(1./2.*(1+k1)).*((1+k1).*(1+k3).*k1x1x1+(-(3./2).*k3-3./2).*k1x1.^2-2.*k2x1.^2.*(1+k1)).*k2+(-k1x1.*k2x1+k2x1x1.*(1+k1)).*(1+k1).^2.*(1+k3))./(((1+k1).*k3-k2.^2+k1+1).^(3./2).*(1+k1).^2);
      k2x2x2=sw.*((((1./2).*k1+1./2).*k1x2x2-(1./2).*k1x2.^2).*k2.^3-k2x2x2.*(1+k1).^2.*k2.^2-(1./2.*(1+k1)).*((1+k1).*(1+k3).*k1x2x2+(-(3./2).*k3-3./2).*k1x2.^2-2.*k2x2.^2.*(1+k1)).*k2+(-k1x2.*k2x2+k2x2x2.*(1+k1)).*(1+k1).^2.*(1+k3))./(((1+k1).*k3-k2.^2+k1+1).^(3./2).*(1+k1).^2);
@@ -125,8 +154,7 @@ end
      k2=var_bias(i)+var_weight(i).*asin(k2./sqrt((1+k1).*(1+k3)));
      
  %%% iteration of variances    
-
-     
+  
      k1x1x1=sw.*(2.*k1x1x1.*k1.^2+(-3.*k1x1.^2+3.*k1x1x1).*k1-2.*k1x1.^2+k1x1x1)./((2.*k1+1).^(3./2).*(1+k1).^2);
      k1x2x2=sw.*(2.*k1x2x2.*k1.^2+(-3.*k1x2.^2+3.*k1x2x2).*k1-2.*k1x2.^2+k1x2x2)./((2.*k1+1).^(3./2).*(1+k1).^2);
 
@@ -144,38 +172,11 @@ end
      k1=var_bias(i)+sw*asin(k1./(1+k1));
      k3=var_bias(i)+sw*asin(k3./(1+k3));
      
-     
-     
+  
  end
  
+ k=k2;
+ Lapx_k=-(k2x1x1+k2x2x2);
+ Lapy_k=-(k2y1y1+k2y2y2);
+ LapLap_k=k2x1x1y1y1+k2x1x1y2y2+k2x2x2y1y1+k2x2x2y2y2;
 
- 
-%  result.k2x1x1=k2x1x1;
-%  result.k2x2x2=k2x2x2;
- 
-%  result.k2=k2;
-%  result.k2x1=k2x1;
-%  result.k2x2=k2x2;
-%  result.k2x1y1=k2x1y1;
-%  result.k2x2y2=k2x2y2;
- result.Lap_k=-(k2x1x1+k2x2x2);
- 
-%  result.k2x1x1y1y1=k2x1x1y1y1;
-%  result.k2x2x2y2y2=k2x2x2y2y2;
-%  result.k2x1x1y2y2=k2x1x1y2y2;
-%  result.k2x2x2y1y1=k2x2x2y1y1;
-%  result.k2x2x2y2y2=k2x2x2y2y2;
-if order>2
- result.LapLap_k=k2x1x1y1y1+k2x1x1y2y2+k2x2x2y1y1+k2x2x2y2y2;
- result.diagonal=diag(result.LapLap_k);
-end
-%  result.diff1=k2x1y1+k2x1y2+k2x2y1+k2x2y2;
- 
-%  result.k2y1y1=k2y1y1;
-%  result.k2y2y2=k2y2y2;
-%  result.k2y2=k2y2;
- 
-%  result.k2x2x2y1=k2x2x2y1;
-%  result.k2x2x2y2=k2x2x2y2;
-%  result.k2x1x1y1=k2x1x1y1;
-%  result.k2x1x1y2=k2x1x1y2;
