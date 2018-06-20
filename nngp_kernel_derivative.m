@@ -9,7 +9,7 @@ function [k, Lapx_k, Lapy_k, LapLap_k]=NN_err_fun_kernel_diff_exact_uploaded(X,Y
  %%%%%        where the superscript "l" denotes index of layer, 
  %%%%%            and x and x' are two input vectors.
   
- %%%%%%%%%%%INPUT
+ %%%%%%%%%%% INPUT
  %%% X:  N1 by d_{in} matrix corresponding to input vector x, where d_{in} is
  %%%    the dimensionality of input space. 
  %%% Y:  N2 by d_{in} matrix corresponding to input vector x'
@@ -22,7 +22,7 @@ function [k, Lapx_k, Lapy_k, LapLap_k]=NN_err_fun_kernel_diff_exact_uploaded(X,Y
  %%% var_weight: 1 by L vector, including the variances of weights 
  %%%            for layers 2,3,...,L+1
  
- %%%%%%%%%%%OUTPUT
+ %%%%%%%%%%% OUTPUT
  %%% k:  k^{L+1}(X,Y), covariance matrix for the output layer (layer L+1)
  %%% Lapx_k:  -\Delta_x k^{L+1}(X,Y) where 
  %%%      -\Delta_x:= -\partial/ \partial x1^2-\partial/\partial x2^2
